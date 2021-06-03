@@ -1,15 +1,48 @@
 import express from 'express'
 import compression from 'compression'
+import cors from 'cors'
+import routes from './routes'
+import config from '@config'
+import logger from 'morgan'
+import bodyParser from 'body-parser'
 
-const app = express()
-const port = 3000
+class App {
+  public express: express.Application
 
-app.use(compression())
+  public constructor () {
+    this.express = express()
+    this.middlewares()
+    this.routes()
+    this.errorHandler()
+  }
 
-app.get('/', (req: any, res: any) => {
-  res.send('The sedulous hyena ate the antelope!')
-})
+  public boot (): express.Application {
+    console.log(`App starting at http://localhost:${config.app.port}`)
+    return this.express
+  }
 
-app.listen(port, () => {
-  return console.log(`server is listening on ${port}`)
-})
+  private middlewares (): void {
+    this.express.use(express.json())
+    this.express.use(cors())
+    this.express.use(compression())
+    this.express.use(logger('dev'))
+    this.express.use(bodyParser.json())
+    this.express.use(bodyParser.urlencoded({ extended: false }))
+  }
+
+  private routes (): void {
+    this.express.use(...routes)
+  }
+
+  private errorHandler (): void {
+    this.express.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+      console.error(err)
+      res.status(400).json({
+        message: err.error?.details,
+        type: err.type
+      })
+    })
+  }
+}
+
+export default App
